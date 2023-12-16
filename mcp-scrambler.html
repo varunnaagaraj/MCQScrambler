@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Multiple Choice Test Scrambler</title>
+    <style>
+      .question-container {
+        margin-bottom: 20px;
+      }
+      .question-label {
+        font-weight: bold;
+        margin-right: 10px;
+      }
+      .option-label {
+        margin-right: 10px;
+        font-weight: 300;
+      }
+      .option-input {
+        margin-right: 10px;
+        font-weight: 300;
+        width: 40%;
+        height: 20px;
+      }
+      .question-input {
+        width: 60%;
+        height: 100px;
+      }
+      .paper-count-container {
+        display: flex;
+        align-items: center;
+      }
+      .paper-count {
+        margin-left: 20px;
+        width: 40px;
+        height: 30px;
+      }
+      body {
+        /* font-family: Cambria, Cochin, Georgia, Times, "Times New Roman", serif; */
+        font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande",
+          "Lucida Sans", Arial, sans-serif;
+        font-size: 14px;
+        background-color: beige;
+        margin-bottom: 40px;
+        margin-inline: 30px;
+      }
+      footer {
+        position: fixed;
+        font-size: 10px;
+        bottom: 0;
+        width: 100%;
+        background-color: beige;
+        color: black;
+      }
+      button {
+        width: 200px;
+        height: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Multiple Choice Test Scrambler</h1>
+    <form id="question-form">
+      <div class="paper-count-container">
+        <h4>Enter the number of papers you want to generate</h4>
+        <select class="paper-count" onchange="setPaperCount(this)">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+
+      <h4>Enter the Questions and Options</h4>
+      <div id="questions-container"></div>
+      <button type="button" onclick="addQuestion()">Add Question</button>
+      <button type="submit">Generate Question Papers</button>
+    </form>
+    <script>
+      let questionCount = 0;
+      const OPTIONS = 4;
+      let scrambledQuestions = [];
+
+      function setPaperCount(selectElement) {
+        const paperCount = selectElement.value;
+        localStorage.setItem("paperCount", paperCount);
+      }
+
+      function addQuestion() {
+        questionCount++;
+        const questionsContainer = document.getElementById(
+          "questions-container"
+        );
+        const qContainer = document.createElement("div");
+        qContainer.className = "question-container";
+
+        const questionLabel = document.createElement("label");
+        questionLabel.className = "question-label";
+        questionLabel.textContent = "Question " + questionCount + ": ";
+        const questionInput = document.createElement("input");
+        questionInput.className = "question-input";
+        qContainer.appendChild(questionLabel);
+        qContainer.appendChild(document.createElement("br"));
+        qContainer.appendChild(questionInput);
+        qContainer.appendChild(document.createElement("br"));
+
+        // Create options inputs
+        for (let i = 1; i <= OPTIONS; i++) {
+          qContainer.appendChild(document.createElement("br"));
+          const optionLabel = document.createElement("label");
+          optionLabel.className = "option-label";
+          optionLabel.textContent = "Option " + i + ": ";
+          const optionInput = document.createElement("input");
+          optionInput.className = "option-input";
+          optionInput.type = "text";
+          optionLabel.appendChild(optionInput);
+          qContainer.appendChild(optionLabel);
+          qContainer.appendChild(document.createElement("br"));
+        }
+
+        questionsContainer.appendChild(qContainer);
+      }
+
+      const form = document.getElementById("question-form");
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        scrambledQuestions = [];
+        // Get all the questions and options
+        const questions = document.getElementsByClassName("question-input");
+        const options = document.getElementsByClassName("option-input");
+
+        const paperCount = parseInt(
+          document.getElementsByClassName("paper-count")[0].value || 1
+        );
+        const questionOptions = [];
+
+        for (let i = 0; i < questions.length; i++) {
+          const question = questions[i].value;
+          const optionsArray = Array.from(options)
+            .slice(i * 4, i * 4 + 4)
+            .map((option) => option.value);
+          questionOptions.push({ question, options: optionsArray });
+        }
+
+        function shuffleArray(array) {
+          const newArray = [...array];
+          for (var i = newArray.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            while (i === j) {
+              j = Math.floor(Math.random() * (i + 1));
+            }
+            var temp = newArray[i];
+            newArray[i] = newArray[j];
+            newArray[j] = temp;
+          }
+          return newArray;
+        }
+
+        function writeToTextFile(filename, content) {
+          var element = document.createElement("a");
+          element.setAttribute(
+            "href",
+            "data:text/plain;charset=utf-8," + encodeURIComponent(content)
+          );
+          element.setAttribute("download", filename);
+          element.style.display = "none";
+          document.body.appendChild(element);
+          element.click();
+          document.body.removeChild(element);
+        }
+
+        function generateAndSaveTextFile(scrambledQuestions, version) {
+          var formattedContent = "";
+          formattedContent += "Version - " + version + "\n";
+          formattedContent +=
+            "-----------------------------------------------------------------------------------" +
+            "\n \n \n \n";
+          for (var i = 0; i < scrambledQuestions.length; i++) {
+            formattedContent +=
+              "Question - " +
+              (i + 1) +
+              " : " +
+              scrambledQuestions[i].question +
+              "\n";
+            scrambledQuestions[i].options.forEach(
+              (option, i) => (formattedContent += i + 1 + ") " + option + "\n")
+            );
+            formattedContent +=
+              "-----------------------------------------------------------------------------------" +
+              "\n";
+          }
+
+          var filename =
+            "MCQGenerator - " +
+            new Date().toDateString() +
+            " - " +
+            version +
+            ".txt";
+          writeToTextFile(filename, formattedContent);
+        }
+
+        function scrambleGenerator(questionOptions) {
+          const scrambleRun = [];
+          const shuffledQues = shuffleArray(questionOptions);
+          shuffledQues.forEach((question) => {
+            const shuffledOps = shuffleArray(question.options);
+            scrambleRun.push({
+              question: question.question,
+              options: shuffledOps,
+            });
+          });
+          return scrambleRun;
+        }
+
+        for (let i = 0; i < paperCount; i++) {
+          scrambledQuestions.push(scrambleGenerator(questionOptions));
+        }
+        console.log("scrambledQuestions", scrambledQuestions);
+        scrambledQuestions.forEach((set, index) => {
+          generateAndSaveTextFile(set, index);
+        });
+      });
+    </script>
+  </body>
+  <footer>
+    <p>
+      Author: Varun Nagaraj
+      <a href="mailto:varunnagaraj.public@gmail.com"
+        >varunnagaraj.public@gmail.com</a
+      >
+    </p>
+  </footer>
+</html>
